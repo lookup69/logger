@@ -9,6 +9,7 @@
 #include <vector>
 #include <mutex>
 
+#include "LoggerPlugin.h"
 namespace lkup69
 {
 class Logger

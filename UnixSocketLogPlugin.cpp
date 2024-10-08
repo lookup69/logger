@@ -1,4 +1,4 @@
-#include "unixSocketLogPlugin.h"
+#include "UnixSocketLogPlugin.h"
 
 #include <thread>
 
@@ -27,17 +27,30 @@ UnixSocketLogPlugin *UnixSocketLogPlugin::CreatePluginIns(const std::string &add
 
                 worker.detach();
         }
-        
+
         return plugin;
 }
 
 void UnixSocketLogPlugin::WriteLog(int level, const std::string &log)
 {
-        for (std::vector<std::unique_ptr<UnixSocket>>::iterator it = m_writeSocketVec.begin(); it != m_writeSocketVec.end(); ++it) {
-                if (it->get()->GetSocket() != -1) {
-                        if (it->get()->Write(log.c_str(), log.size()) < 0) {
-                                m_writeSocketVec.erase(it);
-                        }
+        const std::lock_guard<std::mutex> lock(m_selfLock);
+
+        for (std::vector<SocketConn>::iterator it = m_socketConnVec.begin(); it != m_socketConnVec.end(); ++it) {
+                if (it->socketPtr->Write(log.c_str(), log.size()) < 0)
+                        it->bConnected = false;
+        }
+
+        // TODO
+        // Enhance remove disconnect socket
+        // for (auto &it : m_socketConnVec) {
+        //        printf("socket:%d   bConnected:%s\n", it.socketPtr->GetSocket(), (it.bConnected) ? "true" : "false");
+        //}
+        std::vector<SocketConn>::iterator it = m_socketConnVec.begin();
+        while (it != m_socketConnVec.end()) {
+                if (it->bConnected == false) {
+                        m_socketConnVec.erase(it);
+                        return;
                 }
+                ++it;
         }
 }

@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <memory>
+#include <mutex>
 
 #include "LoggerPlugin.h"
 #include "socketcpp/UnixSocket.h"
@@ -15,6 +16,11 @@ namespace lkup69
 class UnixSocketLogPlugin : public LoggerPlugin
 {
         UnixSocketLogPlugin &operator=(const UnixSocketLogPlugin &) = delete;
+
+        struct SocketConn {
+                std::unique_ptr<UnixSocket> socketPtr;
+                bool                        bConnected = false;
+        };
 
 private:
         UnixSocketLogPlugin(const std::string &addr);
@@ -40,19 +46,24 @@ public:
                 }
 
                 while (!m_bExit) {
-                        std::unique_ptr<UnixSocket> socketPtr;
+                        SocketConn sc;
 
-                        socketPtr.reset(m_sockSrv->Accept());
+                        sc.socketPtr.reset(m_sockSrv->Accept());
 
-                        if (socketPtr.get() != nullptr)
-                                m_writeSocketVec.emplace_back(std::move(socketPtr));
+                        if (sc.socketPtr.get() != nullptr) {
+                                const std::lock_guard<std::mutex> lock(m_selfLock);
+
+                                sc.bConnected = true;
+                                m_socketConnVec.emplace_back(std::move(sc));
+                        }
                 }
         }
 
 private:
-        std::string                              m_addr;
-        std::vector<std::unique_ptr<UnixSocket>> m_writeSocketVec;
-        std::unique_ptr<UnixSocket>              m_sockSrv;
-        bool                                     m_bExit = false;
+        std::string                 m_addr;
+        std::vector<SocketConn>     m_socketConnVec;
+        std::unique_ptr<UnixSocket> m_sockSrv;
+        bool                        m_bExit = false;
+        std::mutex                  m_selfLock;
 };
 }  // namespace lkup69

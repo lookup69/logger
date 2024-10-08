@@ -6,7 +6,7 @@
 
 #include "logger.h"
 #include "ConsoleLogPlugin.h"
-#include "unixSocketLogPlugin.h"
+#include "UnixSocketLogPlugin.h"
 #include "FileLogPlugin.h"
 
 // g++ -std=c++17 -o logger logger.cpp ConsoleLogPlugin.cpp main.cpp unixSocketLogPlugin.cpp FileLogPlugin.cpp socketcpp/UnixSocket.cpp -pthread
