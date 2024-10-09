@@ -56,28 +56,15 @@ FileLogPlugin *FileLogPlugin::CreatePluginIns(const std::string &file, size_t ma
 
 void FileLogPlugin::WriteLog(int level, const std::string &log)
 {
-        auto               now        = std::chrono::system_clock::now();
-        std::time_t        now_c      = std::chrono::system_clock::to_time_t(now - std::chrono::hours(24));
-        std::tm           *local_time = std::localtime(&now_c);
-        std::ostringstream oss;
-        std::string        line;
         std::ofstream      logfile(m_file, std::ofstream::trunc);
-
-        oss << "[" << std::put_time(local_time, "%Y-%m-%d %H:%M:%S") << "]";
-
-        line.append(oss.str());
-        line.append(log);
-
-        if (line.at(line.size() - 1) != '\n')
-                line.push_back('\n');
 
         if (m_logVec.size() > m_maxLines)
                 m_logVec.erase(m_logVec.begin());
 
-        m_logVec.emplace_back(line);
+        m_logVec.emplace_back(log);
 
         if (logfile.is_open()) {
-                for (const auto &log : m_logVec)
-                        logfile << log;
+                for (const auto &m : m_logVec)
+                        logfile << m;
         }
 }

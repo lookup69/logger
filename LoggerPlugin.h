@@ -12,7 +12,7 @@ enum LEVEL_E {
         INFO,
         WARN,
         ERR,
-        NOMARL,
+        NORMAL,
 };
 
 class LoggerPlugin

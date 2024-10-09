@@ -32,9 +32,17 @@ int main()
                 lkup69::Logger::Warn(1.0001);
                 lkup69::Logger::Err("cccccccccccccccc");
 #endif                
+                log_err_f("aaaaaaaaaaaaaaaaaaaaaaaaaa\n");
+                log_info_f("%d %d %s\n", 10, 20, "xxxxxxxx");
+                log_warn_f("cccccccccccccccccccccccccc\n");
+                log_normal_f("%d  uuuuuuu\n", i);
+                log_normal_f("xxxxxxxxxxxxxxxxxxxxxxx\n");
+
                 log_err("aaaaaaaaaaaaaaaaaaaaaaaaaa\n");
                 log_info("%d %d %s\n", 10, 20, "xxxxxxxx");
                 log_warn("cccccccccccccccccccccccccc\n");
+                log_normal("%d  uuuuuuu\n", i);
+                log_normal("xxxxxxxxxxxxxxxxxxxxxxx\n");
                 std::this_thread::sleep_for(std::chrono::seconds(1));
         }
 

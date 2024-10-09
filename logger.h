@@ -8,8 +8,10 @@
 #include <memory>
 #include <vector>
 #include <mutex>
+#include <iomanip>
 
 #include "LoggerPlugin.h"
+
 namespace lkup69
 {
 class Logger
@@ -21,7 +23,7 @@ public:
         template <typename T>
         static void Log(const T &msg)
         {
-                lkup69::Logger::GetInstance().WriteLog_<LEVEL_E::NOMARL>(msg);
+                lkup69::Logger::GetInstance().WriteLog_<LEVEL_E::NORMAL>(msg);
         }
 
         template <typename T>
@@ -45,7 +47,7 @@ public:
         template <typename Format, typename... Args>
         static void Log(Format format, Args... args)
         {
-                lkup69::Logger::GetInstance().WriteLog_<LEVEL_E::NOMARL>(format, args...);
+                lkup69::Logger::GetInstance().WriteLog_<LEVEL_E::NORMAL>(format, args...);
         }
 
         template <typename Format, typename... Args>
@@ -85,27 +87,31 @@ private:
         void RegisterLogPlugin_(std::unique_ptr<LoggerPlugin> &&plugin);
 
         template <int Level = 0, typename T>
-        void WriteLog_(const T &msg)
+        void WriteLog_(const T &log)
         {
                 const std::lock_guard<std::mutex> lock(m_selfLock);
 
                 if (m_pluginVec.empty())
                         return;
+                auto               now        = std::chrono::system_clock::now();
+                std::time_t        now_c      = std::chrono::system_clock::to_time_t(now - std::chrono::hours(24));
+                std::tm           *local_time = std::localtime(&now_c);
+                std::ostringstream oss;
+                std::string        msg;
 
-                std::stringstream ss;
-                std::string       lineHeader;
+                oss << "[" << std::put_time(local_time, "%Y%m%d %H:%M:%S") << "]";
 
-                ss << msg;
                 if (Level == INFO)
-                        lineHeader = "[info]";
+                        oss << "[info]";
                 else if (Level == WARN)
-                        lineHeader = "[warn]";
+                        oss << "[warn]";
                 else if (Level == ERR)
-                        lineHeader = "[err]";
-                lineHeader += ss.str();
+                        oss << "[err]";
+
+                oss << " " << log;
 
                 for (const auto &plugin : m_pluginVec)
-                        plugin->WriteLog(Level, lineHeader);
+                        plugin->WriteLog(Level, oss.str());
         }
 
         template <int Level = 0, typename Format, typename... Args>
@@ -116,8 +122,8 @@ private:
                 if (m_pluginVec.empty())
                         return;
 
-                char buf[4096] = { 0 };
-                int  off       = 0;
+                char        buf[4096] = { 0 };
+                int         off       = 0;
                 std::string lineHeader;
 
                 if (Level == INFO)
@@ -127,11 +133,25 @@ private:
                 else if (Level == ERR)
                         lineHeader = "[err]";
 
+                lineHeader.append(" ");
+
                 off = snprintf(buf, lineHeader.size() + 1, "%s", lineHeader.c_str());
                 snprintf((buf + off), sizeof(buf) - off - 1, format, args...);
 
+                auto               now        = std::chrono::system_clock::now();
+                std::time_t        now_c      = std::chrono::system_clock::to_time_t(now - std::chrono::hours(24));
+                std::tm           *local_time = std::localtime(&now_c);
+                std::ostringstream oss;
+                std::string        msg;
+                oss << "[" << std::put_time(local_time, "%Y%m%d %H:%M:%S") << "]";
+                msg.append(oss.str());
+                msg.append(buf);
+
+                if (msg.at(msg.size() - 1) != '\n')
+                        msg.push_back('\n');
+
                 for (const auto &plugin : m_pluginVec)
-                        plugin->WriteLog(Level, buf);
+                        plugin->WriteLog(Level, msg);
         }
 
 private:
@@ -142,6 +162,12 @@ private:
 
 }  // namespace lkup69
 
-#define log_info(format, ...) lkup69::Logger::Info("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define log_warn(format, ...) lkup69::Logger::Warn("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define log_err(format, ...)  lkup69::Logger::Err("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define log_info_f(format, ...)   lkup69::Logger::Info("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define log_warn_f(format, ...)   lkup69::Logger::Warn("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define log_err_f(format, ...)    lkup69::Logger::Err("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define log_normal_f(format, ...) lkup69::Logger::Log("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+
+#define log_info(format, ...)     lkup69::Logger::Info(format, ##__VA_ARGS__)
+#define log_warn(format, ...)     lkup69::Logger::Warn(format, ##__VA_ARGS__)
+#define log_err(format, ...)      lkup69::Logger::Err(format, ##__VA_ARGS__)
+#define log_normal(format, ...)   lkup69::Logger::Log(format, ##__VA_ARGS__)
