@@ -89,14 +89,14 @@ public:
         }
 
 private:
-        Logger()  
+        Logger()
         {
-                m_workThread = std::thread{&Logger::WriteLogThread_, this};
+                m_workThread = std::thread{ &Logger::WriteLogThread_, this };
         }
 
-        ~Logger() 
+        ~Logger()
         {
-                m_bExit =  true;
+                m_bExit = true;
 
                 m_workThread.join();
         }
@@ -150,19 +150,17 @@ private:
                 else if (Level == ERR)
                         oss << "[err]";
 
-                //oss << " " << log;
                 oss << log;
 
                 logElm.msg   = std::move(oss.str());
                 logElm.level = Level;
-
 #if 1
                 m_logQueue.push(logElm);
                 m_cv.notify_all();
 #else
                 for (const auto &plugin : m_pluginVec)
                         plugin->WriteLog(logElm.level, logElm.msg);
-#endif                        
+#endif
         }
 
         template <int Level = 0, typename Format, typename... Args>
@@ -170,6 +168,7 @@ private:
         {
                 if (m_pluginVec.empty())
                         return;
+
                 const std::lock_guard<std::mutex> lock(m_writeLoke);
 
                 char        buf[4096] = { 0 };
@@ -202,10 +201,10 @@ private:
 #if 1
                 m_logQueue.push(logElm);
                 m_cv.notify_all();
-#else                
+#else
                 for (const auto &plugin : m_pluginVec)
                         plugin->WriteLog(logElm.level, logElm.msg);
-#endif                        
+#endif
         }
 
 private:
