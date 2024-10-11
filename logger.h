@@ -26,8 +26,32 @@ class Logger
 
         Logger(const Logger &)            = delete;
         Logger &operator=(const Logger &) = delete;
+        Logger()
+        {
+                m_workThread = std::thread{ &Logger::WriteLogThread_, this };
+        }
+        
+public:
+        ~Logger()
+        {
+                m_bExit = true;
+
+                m_workThread.join();
+        }
 
 public:
+        static Logger &GetInstance()
+        {
+                static Logger logger;
+
+                return logger;
+        }
+
+        static void RegisterLogPlugin(std::unique_ptr<LoggerPlugin> &&plugin)
+        {
+                Logger::GetInstance().RegisterLogPlugin_(std::move(plugin));
+        }
+
         template <typename T>
         static void Log(const T &msg)
         {
@@ -76,30 +100,7 @@ public:
                 lkup69::Logger::GetInstance().WriteLog_<LEVEL_E::ERR>(format, args...);
         }
 
-        static Logger &GetInstance()
-        {
-                static Logger logger;
-
-                return logger;
-        }
-
-        static void RegisterLogPlugin(std::unique_ptr<LoggerPlugin> &&plugin)
-        {
-                Logger::GetInstance().RegisterLogPlugin_(std::move(plugin));
-        }
-
 private:
-        Logger()
-        {
-                m_workThread = std::thread{ &Logger::WriteLogThread_, this };
-        }
-
-        ~Logger()
-        {
-                m_bExit = true;
-
-                m_workThread.join();
-        }
 
         void RegisterLogPlugin_(std::unique_ptr<LoggerPlugin> &&plugin);
 

@@ -9,7 +9,7 @@
 #include "UnixSocketLogPlugin.h"
 #include "FileLogPlugin.h"
 
-// g++ -std=c++17 -o logger logger.cpp ConsoleLogPlugin.cpp main.cpp unixSocketLogPlugin.cpp FileLogPlugin.cpp socketcpp/UnixSocket.cpp -pthread
+// g++ -std=c++17 -o logger -I.. main.cpp ../logger.cpp ../ConsoleLogPlugin.cpp  ../UnixSocketLogPlugin.cpp ../FileLogPlugin.cpp ../socketcpp/UnixSocket.cpp -pthread
 int main()
 {
         lkup69::Logger::RegisterLogPlugin(std::unique_ptr<lkup69::ConsoleLogPlugin>(lkup69::ConsoleLogPlugin::CreatePluginIns()));
