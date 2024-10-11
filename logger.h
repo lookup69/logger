@@ -8,6 +8,9 @@
 #include <memory>
 #include <vector>
 #include <mutex>
+#include <condition_variable>
+#include <thread>
+#include <queue>
 #include <iomanip>
 
 #include "LoggerPlugin.h"
@@ -16,6 +19,11 @@ namespace lkup69
 {
 class Logger
 {
+        struct LogQueueElm {
+                int         level;
+                std::string msg;
+        };
+
         Logger(const Logger &)            = delete;
         Logger &operator=(const Logger &) = delete;
 
@@ -81,23 +89,57 @@ public:
         }
 
 private:
-        Logger()  = default;
-        ~Logger() = default;
+        Logger()  
+        {
+                m_workThread = std::thread{&Logger::WriteLogThread_, this};
+        }
+
+        ~Logger() 
+        {
+                m_bExit =  true;
+
+                m_workThread.join();
+        }
 
         void RegisterLogPlugin_(std::unique_ptr<LoggerPlugin> &&plugin);
+
+        void WriteLogThread_()
+        {
+                while (!m_bExit) {
+                        std::unique_lock<std::mutex> lck(m_selfLock);
+
+                        m_cv.wait(lck);
+
+                        while (!m_logQueue.empty()) {
+                                LogQueueElm logElm;
+
+                                {
+                                        const std::lock_guard<std::mutex> lock(m_writeLoke);
+
+                                        logElm = std::move(m_logQueue.front());
+                                        m_logQueue.pop();
+                                }
+
+                                for (const auto &plugin : m_pluginVec)
+                                        plugin->WriteLog(logElm.level, logElm.msg);
+                        }
+
+                        lck.unlock();
+                }
+        }
 
         template <int Level = 0, typename T>
         void WriteLog_(const T &log)
         {
-                const std::lock_guard<std::mutex> lock(m_selfLock);
-
                 if (m_pluginVec.empty())
                         return;
+                const std::lock_guard<std::mutex> lock(m_writeLoke);
+
                 auto               now        = std::chrono::system_clock::now();
                 std::time_t        now_c      = std::chrono::system_clock::to_time_t(now - std::chrono::hours(24));
                 std::tm           *local_time = std::localtime(&now_c);
                 std::ostringstream oss;
-                std::string        msg;
+                LogQueueElm        logElm;
 
                 oss << "[" << std::put_time(local_time, "%Y%m%d %H:%M:%S") << "]";
 
@@ -108,23 +150,32 @@ private:
                 else if (Level == ERR)
                         oss << "[err]";
 
-                oss << " " << log;
+                //oss << " " << log;
+                oss << log;
 
+                logElm.msg   = std::move(oss.str());
+                logElm.level = Level;
+
+#if 1
+                m_logQueue.push(logElm);
+                m_cv.notify_all();
+#else
                 for (const auto &plugin : m_pluginVec)
-                        plugin->WriteLog(Level, oss.str());
+                        plugin->WriteLog(logElm.level, logElm.msg);
+#endif                        
         }
 
         template <int Level = 0, typename Format, typename... Args>
         void WriteLog_(Format format, Args &...args)
         {
-                const std::lock_guard<std::mutex> lock(m_selfLock);
-
                 if (m_pluginVec.empty())
                         return;
+                const std::lock_guard<std::mutex> lock(m_writeLoke);
 
                 char        buf[4096] = { 0 };
                 int         off       = 0;
                 std::string lineHeader;
+                LogQueueElm logElm;
 
                 if (Level == INFO)
                         lineHeader = "[info]";
@@ -133,8 +184,6 @@ private:
                 else if (Level == ERR)
                         lineHeader = "[err]";
 
-                lineHeader.append(" ");
-
                 off = snprintf(buf, lineHeader.size() + 1, "%s", lineHeader.c_str());
                 snprintf((buf + off), sizeof(buf) - off - 1, format, args...);
 
@@ -142,22 +191,32 @@ private:
                 std::time_t        now_c      = std::chrono::system_clock::to_time_t(now - std::chrono::hours(24));
                 std::tm           *local_time = std::localtime(&now_c);
                 std::ostringstream oss;
-                std::string        msg;
+
                 oss << "[" << std::put_time(local_time, "%Y%m%d %H:%M:%S") << "]";
-                msg.append(oss.str());
-                msg.append(buf);
+                logElm.msg.append(oss.str());
+                logElm.msg.append(buf);
+                logElm.level = Level;
 
-                if (msg.at(msg.size() - 1) != '\n')
-                        msg.push_back('\n');
-
+                if (logElm.msg.at(logElm.msg.size() - 1) != '\n')
+                        logElm.msg.push_back('\n');
+#if 1
+                m_logQueue.push(logElm);
+                m_cv.notify_all();
+#else                
                 for (const auto &plugin : m_pluginVec)
-                        plugin->WriteLog(Level, msg);
+                        plugin->WriteLog(logElm.level, logElm.msg);
+#endif                        
         }
 
 private:
-        std::vector<std::unique_ptr<LoggerPlugin>> m_pluginVec;
         std::mutex                                 m_selfLock;
+        std::mutex                                 m_writeLoke;
+        std::vector<std::unique_ptr<LoggerPlugin>> m_pluginVec;
+        std::queue<LogQueueElm>                    m_logQueue;
+        std::thread                                m_workThread;
         bool                                       m_bDateTime = true;
+        bool                                       m_bExit     = false;
+        std::condition_variable                    m_cv;
 };
 
 }  // namespace lkup69
@@ -167,7 +226,7 @@ private:
 #define log_err_f(format, ...)    lkup69::Logger::Err("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
 #define log_normal_f(format, ...) lkup69::Logger::Log("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
 
-#define log_info(format, ...)     lkup69::Logger::Info(format, ##__VA_ARGS__)
-#define log_warn(format, ...)     lkup69::Logger::Warn(format, ##__VA_ARGS__)
-#define log_err(format, ...)      lkup69::Logger::Err(format, ##__VA_ARGS__)
-#define log_normal(format, ...)   lkup69::Logger::Log(format, ##__VA_ARGS__)
+#define log_info(format, ...)     lkup69::Logger::Info(" " format, ##__VA_ARGS__)
+#define log_warn(format, ...)     lkup69::Logger::Warn(" " format, ##__VA_ARGS__)
+#define log_err(format, ...)      lkup69::Logger::Err(" " format, ##__VA_ARGS__)
+#define log_normal(format, ...)   lkup69::Logger::Log(" " format, ##__VA_ARGS__)
