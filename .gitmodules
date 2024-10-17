@@ -1,0 +1,3 @@
+[submodule "socketcpp"]
+	path = socketcpp
+	url = git@github.com:lookup69/socketcpp.git
