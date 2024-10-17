@@ -22,12 +22,11 @@ UnixSocket *UnixSocket::CreateSocket(int type, bool bNonBlocking)
         // close socket when any of the exec-family functions succeed.
         type = type | SOCK_CLOEXEC;
 
-        if(bNonBlocking)
+        if (bNonBlocking)
                 type = type | SOCK_NONBLOCK;
 
         if ((sd = socket(AF_UNIX, type, 0)) == -1)
                 return nullptr;
-
 
         return new (std::nothrow) UnixSocket{ sd };
 }
@@ -45,24 +44,30 @@ void UnixSocket::Close()
 }
 
 // port would no used. compatiable with socket interface only
-int UnixSocket::Bind(const std::string &address,int port)
+int UnixSocket::Bind(const std::string   &address,
+                     [[maybe_unused]] int port)
 {
-        struct sockaddr_un unaddr = { 0 };
-        size_t             len;
+        struct sockaddr_un unaddr {
+                .sun_family = AF_UNIX,
+                .sun_path
+                {
+                        0
+                }
+        };
+        size_t len;
 
         assert(address.size() > 0);
 
-        unaddr.sun_family = AF_UNIX;
-
         // Abstract Socket Namespace
         len = (address.size() > (sizeof(unaddr.sun_path) - 2)) ? (sizeof(unaddr.sun_path) - 2) : address.size();
-        memcpy(unaddr.sun_path, address.c_str(), len);
-        unlink(unaddr.sun_path);
+        if (port == ABSTRACT_ADDR) {
+                memcpy(&unaddr.sun_path[1], address.c_str(), len);
+        } else {
+                unlink(address.c_str());
+                memcpy(unaddr.sun_path, address.c_str(), len);
+        }
 
-        if (bind(m_socket, (struct sockaddr *)&unaddr, sizeof(struct sockaddr_un)) < 0)
-                return -1;
-
-        return 0;
+        return bind(m_socket, (struct sockaddr *)&unaddr, sizeof(struct sockaddr_un));
 }
 
 int UnixSocket::Listen(int maxConnection)
@@ -74,27 +79,34 @@ UnixSocket *UnixSocket::Accept()
 {
         int sd;
 
-        if ((sd = accept(m_socket, nullptr, 0)) == -1) 
+        if ((sd = accept(m_socket, nullptr, 0)) == -1)
                 return nullptr;
 
         return new (std::nothrow) UnixSocket{ sd };
 }
 
-int UnixSocket::Connect(const std::string &address)
+int UnixSocket::Connect(const std::string &address, int port)
 {
-        struct sockaddr_un unaddr = { 0 };
-        size_t             len;
+        struct sockaddr_un unaddr {
+                .sun_family = 0,
+                .sun_path
+                {
+                        0
+                }
+        };
+        size_t len;
 
         assert(address.size() > 0);
 
         unaddr.sun_family = AF_UNIX;
         len               = (address.size() > (sizeof(unaddr.sun_path) - 2)) ? (sizeof(unaddr.sun_path) - 2) : address.size();
-        memcpy(unaddr.sun_path, address.c_str(), len);
 
-        if (connect(m_socket, (struct sockaddr *)&unaddr, sizeof(struct sockaddr_un)) == -1)
-                return -1;
+        if (port == ABSTRACT_ADDR)
+                memcpy(&unaddr.sun_path[1], address.c_str(), len);
+        else
+                memcpy(unaddr.sun_path, address.c_str(), len);
 
-        return 0;
+        return connect(m_socket, (struct sockaddr *)&unaddr, sizeof(struct sockaddr_un));
 }
 
 ssize_t UnixSocket::Read(void *buf, size_t len)
@@ -102,6 +114,25 @@ ssize_t UnixSocket::Read(void *buf, size_t len)
         assert(buf);
 
         return read(m_socket, buf, len);
+}
+
+ssize_t UnixSocket::Read(std::string &msg)
+{
+        int ret;
+
+        msg.clear();
+        while(1) {
+                char buf[4096] = {0};
+
+                
+                ret = read(m_socket, buf, sizeof(buf) - 1);
+                if(ret <= 0)
+                        break;
+
+                msg.append(buf);
+        }
+
+        return ret;
 }
 
 ssize_t UnixSocket::Write(const void *buf, size_t len)
@@ -120,5 +151,4 @@ ssize_t UnixSocket::Write(const std::string &msg)
 
         return write(m_socket, msg.c_str(), len);
 }
-
 

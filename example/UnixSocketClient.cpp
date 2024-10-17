@@ -15,7 +15,8 @@ int main(int argc, char *argv[])
         string address{"/tmp/."};
         char buf[1024] = {0};
 
-        if(argc != 1) {
+	printf("argc:%d\n", argc);
+        if(argc != 2) {
                 printf("./UnixSocketClient {logger_pid|unixsocket path}\n");
 
                 return 0;
