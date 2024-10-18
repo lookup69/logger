@@ -22,10 +22,15 @@ UnixSocketLogPlugin *UnixSocketLogPlugin::CreatePluginIns(const std::string &add
 {
         UnixSocketLogPlugin *plugin = new (std::nothrow) UnixSocketLogPlugin{ addr };
 
-        if (plugin) {
+        if (plugin and (plugin->m_sockSrv != nullptr)) {
+
                 std::thread worker(std::ref(*plugin));
 
                 worker.detach();
+        } else {
+                delete plugin;
+
+                return nullptr;
         }
 
         return plugin;

@@ -9,3 +9,7 @@ a utility for logging
         FileLogPlugin -> log to file
         ConsoleLogPlugin -> disply to console 
         unixSocketLogPlugin -> send log to unix socket
+
+
+    socketcpp is a submodules
+        git clone needs to add --recurse-submodules
