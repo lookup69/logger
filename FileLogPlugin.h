@@ -26,7 +26,7 @@ public:
         static FileLogPlugin *CreatePluginIns(const std::string &file, size_t maxLines = 1000);
 
 public:
-        void WriteLog(int level, const std::string &log) override;
+        void WriteLog(LEVEL_E level, const std::string &log) override;
 
 private:
         std::string              m_file;

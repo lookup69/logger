@@ -1,11 +1,15 @@
+/*
+        2025 10 01
+*/
+
 #pragma once
 
 #include <stdio.h>
-#include <signal.h>
 
 #include <vector>
 #include <memory>
 #include <mutex>
+#include <thread>
 
 #include "LoggerPlugin.h"
 #include "socketcpp/UnixSocket.h"
@@ -26,44 +30,22 @@ private:
         UnixSocketLogPlugin(const std::string &addr);
 
 public:
-        ~UnixSocketLogPlugin() override
-        {
-                m_bExit = true;
-        }
+        ~UnixSocketLogPlugin() override;
 
 public:
         static UnixSocketLogPlugin *CreatePluginIns(const std::string &addr = std::string{});
 
 public:
-        void WriteLog(int level, const std::string &log) override;
+        void operator()();
 
-        void operator()()
-        {
-                if (m_sockSrv->Bind(m_addr) == -1) {
-                }
-
-                if (m_sockSrv->Listen(1) == -1) {
-                }
-
-                while (!m_bExit) {
-                        SocketConn sc;
-
-                        sc.socketPtr.reset(m_sockSrv->Accept());
-
-                        if (sc.socketPtr.get() != nullptr) {
-                                const std::lock_guard<std::mutex> lock(m_selfLock);
-
-                                sc.bConnected = true;
-                                m_socketConnVec.emplace_back(std::move(sc));
-                        }
-                }
-        }
+        void WriteLog(LEVEL_E level, const std::string &log) override;
 
 private:
         std::string                 m_addr;
         std::vector<SocketConn>     m_socketConnVec;
-        std::unique_ptr<UnixSocket> m_sockSrv;
+        std::unique_ptr<UnixSocket> m_sockSrvPtr;
         bool                        m_bExit = false;
         std::mutex                  m_selfLock;
+        std::thread                 m_worker;
 };
 }  // namespace lkup69

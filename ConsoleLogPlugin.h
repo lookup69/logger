@@ -12,7 +12,8 @@ class ConsoleLogPlugin : public LoggerPlugin
 {
         ConsoleLogPlugin(const ConsoleLogPlugin &)                  = delete;
         const ConsoleLogPlugin &operator=(const ConsoleLogPlugin &) = delete;
-        ConsoleLogPlugin()          = default;
+        ConsoleLogPlugin()                                          = default;
+
 public:
         virtual ~ConsoleLogPlugin() = default;
 
@@ -23,6 +24,6 @@ public:
         }
 
 public:
-        void WriteLog(int level, const std::string &log) override;
+        void WriteLog(LEVEL_E level, const std::string &log) override;
 };
 }  // namespace lkup69

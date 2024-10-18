@@ -54,7 +54,7 @@ FileLogPlugin *FileLogPlugin::CreatePluginIns(const std::string &file, size_t ma
         return new (std::nothrow) FileLogPlugin{ file, maxLines };
 }
 
-void FileLogPlugin::WriteLog(int level, const std::string &log)
+void FileLogPlugin::WriteLog(LEVEL_E level, const std::string &log)
 {
         std::ofstream      logfile(m_file, std::ofstream::trunc);
 

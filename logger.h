@@ -20,7 +20,7 @@ namespace lkup69
 class Logger
 {
         struct LogQueueElm {
-                int         level;
+                LEVEL_E     level;
                 std::string msg;
         };
 
@@ -30,13 +30,14 @@ class Logger
         {
                 m_workThread = std::thread{ &Logger::WriteLogThread_, this };
         }
-        
+
 public:
         ~Logger()
         {
                 m_bExit = true;
-
-                m_workThread.join();
+                m_cv.notify_all();
+                if (m_workThread.joinable())
+                        m_workThread.join();
         }
 
 public:
@@ -65,6 +66,12 @@ public:
         }
 
         template <typename T>
+        static void Trace(const T &msg)
+        {
+                lkup69::Logger::GetInstance().WriteLog_<LEVEL_E::TRACE>(msg);
+        }
+
+        template <typename T>
         static void Warn(const T &msg)
         {
                 lkup69::Logger::GetInstance().WriteLog_<LEVEL_E::WARN>(msg);
@@ -89,6 +96,12 @@ public:
         }
 
         template <typename Format, typename... Args>
+        static void Trace(Format format, Args... args)
+        {
+                lkup69::Logger::GetInstance().WriteLog_<LEVEL_E::TRACE>(format, args...);
+        }
+
+        template <typename Format, typename... Args>
         static void Warn(Format format, Args... args)
         {
                 lkup69::Logger::GetInstance().WriteLog_<LEVEL_E::WARN>(format, args...);
@@ -101,7 +114,6 @@ public:
         }
 
 private:
-
         void RegisterLogPlugin_(std::unique_ptr<LoggerPlugin> &&plugin);
 
         void WriteLogThread_()
@@ -129,7 +141,7 @@ private:
                 }
         }
 
-        template <int Level = 0, typename T>
+        template <LEVEL_E Level = LEVEL_E::NORMAL, typename T>
         void WriteLog_(const T &log)
         {
                 if (m_pluginVec.empty())
@@ -144,11 +156,13 @@ private:
 
                 oss << "[" << std::put_time(local_time, "%Y%m%d %H:%M:%S") << "]";
 
-                if (Level == INFO)
+                if (Level == LEVEL_E::INFO)
                         oss << "[info]";
-                else if (Level == WARN)
+                else if (Level == LEVEL_E::TRACE)
+                        oss << "[trace]";
+                else if (Level == LEVEL_E::WARN)
                         oss << "[warn]";
-                else if (Level == ERR)
+                else if (Level == LEVEL_E::ERR)
                         oss << "[err]";
 
                 oss << log;
@@ -164,7 +178,7 @@ private:
 #endif
         }
 
-        template <int Level = 0, typename Format, typename... Args>
+        template <LEVEL_E Level = LEVEL_E::NORMAL, typename Format, typename... Args>
         void WriteLog_(Format format, Args &...args)
         {
                 if (m_pluginVec.empty())
@@ -177,11 +191,13 @@ private:
                 std::string lineHeader;
                 LogQueueElm logElm;
 
-                if (Level == INFO)
+                if (Level == LEVEL_E::INFO)
                         lineHeader = "[info]";
-                else if (Level == WARN)
+                else if (Level == LEVEL_E::TRACE)
+                        lineHeader = "[trace]";
+                else if (Level == LEVEL_E::WARN)
                         lineHeader = "[warn]";
-                else if (Level == ERR)
+                else if (Level == LEVEL_E::ERR)
                         lineHeader = "[err]";
 
                 off = snprintf(buf, lineHeader.size() + 1, "%s", lineHeader.c_str());
@@ -221,12 +237,14 @@ private:
 
 }  // namespace lkup69
 
-#define log_info_f(format, ...)   lkup69::Logger::Info("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define log_warn_f(format, ...)   lkup69::Logger::Warn("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
 #define log_err_f(format, ...)    lkup69::Logger::Err("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define log_warn_f(format, ...)   lkup69::Logger::Warn("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define log_trace_f(format, ...)  lkup69::Logger::Trace("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define log_info_f(format, ...)   lkup69::Logger::Info("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
 #define log_normal_f(format, ...) lkup69::Logger::Log("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
 
-#define log_info(format, ...)     lkup69::Logger::Info(" " format, ##__VA_ARGS__)
-#define log_warn(format, ...)     lkup69::Logger::Warn(" " format, ##__VA_ARGS__)
 #define log_err(format, ...)      lkup69::Logger::Err(" " format, ##__VA_ARGS__)
+#define log_warn(format, ...)     lkup69::Logger::Warn(" " format, ##__VA_ARGS__)
+#define log_trace(format, ...)    lkup69::Logger::Trace(" " format, ##__VA_ARGS__)
+#define log_info(format, ...)     lkup69::Logger::Info(" " format, ##__VA_ARGS__)
 #define log_normal(format, ...)   lkup69::Logger::Log(" " format, ##__VA_ARGS__)

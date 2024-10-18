@@ -8,8 +8,9 @@
 
 namespace lkup69
 {
-enum LEVEL_E {
+enum class LEVEL_E {
         INFO,
+        TRACE,
         WARN,
         ERR,
         NORMAL,
@@ -18,7 +19,7 @@ enum LEVEL_E {
 class LoggerPlugin
 {
 public:
-        virtual void WriteLog(int level, const std::string &log) = 0;
-        virtual ~LoggerPlugin()                                  = default;
+        virtual void WriteLog(LEVEL_E level, const std::string &log) = 0;
+        virtual ~LoggerPlugin()                                      = default;
 };
 }  // namespace lkup69

@@ -1,5 +1,6 @@
 
 /*
+        2024-10-08
 */
 
 #include <thread>
@@ -18,9 +19,7 @@ int main()
 
         printf("pid:%u\n", getpid());
 
-        int i = 0;
-        while (1) {
-                ++i;
+        for (int i = 0; i < 5; ++i) {
 #if 0                
                 lkup69::Logger::Log("[%s][%s][%d]%s", __FILE__, __PRETTY_FUNCTION__, __LINE__, "aaa");
                 lkup69::Logger::Info("[%s][%s][%d]%s", __FILE__, __PRETTY_FUNCTION__, __LINE__, "aaa");
@@ -31,16 +30,18 @@ int main()
                 lkup69::Logger::Info(100000 + i);
                 lkup69::Logger::Warn(1.0001);
                 lkup69::Logger::Err("cccccccccccccccc");
-#endif                
+#endif
                 log_err_f("aaaaaaaaaaaaaaaaaaaaaaaaaa\n");
-                log_info_f("%d %d %s\n", 10, 20, "xxxxxxxx");
                 log_warn_f("cccccccccccccccccccccccccc\n");
+                log_trace_f("%d %d %s\n", 10, 20, "xxxxxxxx");
+                log_info_f("%d %d %s\n", 10, 20, "xxxxxxxx");
                 log_normal_f("%d  uuuuuuu\n", i);
                 log_normal_f("xxxxxxxxxxxxxxxxxxxxxxx\n");
 
                 log_err("aaaaaaaaaaaaaaaaaaaaaaaaaa\n");
-                log_info("%d %d %s\n", 10, 20, "xxxxxxxx");
                 log_warn("cccccccccccccccccccccccccc\n");
+                log_trace("%d %d %s\n", 10, 20, "xxxxxxxx");
+                log_info("%d %d %s\n", 10, 20, "xxxxxxxx");
                 log_normal("%d  uuuuuuu\n", i);
                 log_normal("xxxxxxxxxxxxxxxxxxxxxxx\n");
                 std::this_thread::sleep_for(std::chrono::seconds(1));

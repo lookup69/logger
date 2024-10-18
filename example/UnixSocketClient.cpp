@@ -1,3 +1,7 @@
+/*
+        2024-10-08
+*/
+
 #include <stdio.h>
 
 #include <string>
@@ -28,7 +32,7 @@ int main(int argc, char *argv[])
                 address += "/tmp/.";
                 address += argv[2];
                 address += ".logger";
-        } else if(std::string{ "-path" }.compare(argv[1]) == 0) {
+        } else if (std::string{ "-path" }.compare(argv[1]) == 0) {
                 address = argv[2];
         }
 
