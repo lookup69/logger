@@ -232,18 +232,19 @@ private:
 
 }  // namespace lkup69
 
-#define enable_plugin(name)       lkup69::Logger::EnablePlugin(name)
-#define disable_plugin(name)      lkup69::Logger::DisablePlugin(name)
+#define register_log_plugin(plugin, name) lkup69::Logger::RegisterLogPlugin(plugin, name)
+#define enable_plugin(name)               lkup69::Logger::EnablePlugin(name)
+#define disable_plugin(name)              lkup69::Logger::DisablePlugin(name)
 
 // _f means full message
-#define log_err_f(format, ...)    lkup69::Logger::Err("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define log_warn_f(format, ...)   lkup69::Logger::Warn("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define log_trace_f(format, ...)  lkup69::Logger::Trace("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define log_info_f(format, ...)   lkup69::Logger::Info("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define log_normal_f(format, ...) lkup69::Logger::Log("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define log_err_f(format, ...)            lkup69::Logger::Err("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define log_warn_f(format, ...)           lkup69::Logger::Warn("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define log_trace_f(format, ...)          lkup69::Logger::Trace("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define log_info_f(format, ...)           lkup69::Logger::Info("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define log_normal_f(format, ...)         lkup69::Logger::Log("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
 
-#define log_err(format, ...)      lkup69::Logger::Err(" " format, ##__VA_ARGS__)
-#define log_warn(format, ...)     lkup69::Logger::Warn(" " format, ##__VA_ARGS__)
-#define log_trace(format, ...)    lkup69::Logger::Trace(" " format, ##__VA_ARGS__)
-#define log_info(format, ...)     lkup69::Logger::Info(" " format, ##__VA_ARGS__)
-#define log_normal(format, ...)   lkup69::Logger::Log(" " format, ##__VA_ARGS__)
+#define log_err(format, ...)              lkup69::Logger::Err(" " format, ##__VA_ARGS__)
+#define log_warn(format, ...)             lkup69::Logger::Warn(" " format, ##__VA_ARGS__)
+#define log_trace(format, ...)            lkup69::Logger::Trace(" " format, ##__VA_ARGS__)
+#define log_info(format, ...)             lkup69::Logger::Info(" " format, ##__VA_ARGS__)
+#define log_normal(format, ...)           lkup69::Logger::Log(" " format, ##__VA_ARGS__)

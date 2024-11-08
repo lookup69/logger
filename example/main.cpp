@@ -13,10 +13,15 @@
 // g++ -std=c++17 -o logger -I.. main.cpp ../logger.cpp ../ConsoleLogPlugin.cpp  ../UnixSocketLogPlugin.cpp ../FileLogPlugin.cpp ../socketcpp/UnixSocket.cpp -pthread
 int main()
 {
+#if 0        
         lkup69::Logger::RegisterLogPlugin(std::unique_ptr<lkup69::ConsoleLogPlugin>(lkup69::ConsoleLogPlugin::CreatePluginIns()), "consolePlugin");
         lkup69::Logger::RegisterLogPlugin(std::unique_ptr<lkup69::UnixSocketLogPlugin>(lkup69::UnixSocketLogPlugin::CreatePluginIns()), "socketPlugin");
         lkup69::Logger::RegisterLogPlugin(std::unique_ptr<lkup69::FileLogPlugin>(lkup69::FileLogPlugin::CreatePluginIns("/tmp/aaa/aaa.log", 20)), "filePlugin");
-
+#else
+        register_log_plugin(std::unique_ptr<lkup69::ConsoleLogPlugin>(lkup69::ConsoleLogPlugin::CreatePluginIns()), "consolePlugin");
+        register_log_plugin(std::unique_ptr<lkup69::UnixSocketLogPlugin>(lkup69::UnixSocketLogPlugin::CreatePluginIns()), "socketPlugin");
+        register_log_plugin(std::unique_ptr<lkup69::FileLogPlugin>(lkup69::FileLogPlugin::CreatePluginIns("/tmp/aaa/aaa.log", 20)), "filePlugin");
+#endif
         printf("pid:%u\n", getpid());
 
         for (int i = 0; i < 5; ++i) {
@@ -32,9 +37,9 @@ int main()
                 lkup69::Logger::Err("cccccccccccccccc");
 #endif
                 log_info("time: %d", i);
-                if(i % 2)
+                if (i % 2)
                         enable_plugin("consolePlugin");
-                else    
+                else
                         disable_plugin("consolePlugin");
 
                 log_err_f("aaaaaaaaaaaaaaaaaaaaaaaaaa\n");
@@ -51,7 +56,6 @@ int main()
                 log_normal("%d  uuuuuuu\n", i);
                 log_normal("xxxxxxxxxxxxxxxxxxxxxxx\n");
                 std::this_thread::sleep_for(std::chrono::seconds(1));
-
         }
 
         return 0;
