@@ -24,6 +24,12 @@ class Logger
                 std::string msg;
         };
 
+        struct PluginInElm {
+                std::string                   name;
+                std::unique_ptr<LoggerPlugin> plugin;
+                bool                          enable = true;
+        };
+
         Logger(const Logger &)            = delete;
         Logger &operator=(const Logger &) = delete;
         Logger()
@@ -35,7 +41,7 @@ public:
         ~Logger()
         {
                 m_bExit = true;
-                m_cv.notify_all();
+                m_flushNotify.notify_all();
                 if (m_workThread.joinable())
                         m_workThread.join();
         }
@@ -48,9 +54,19 @@ public:
                 return logger;
         }
 
-        static void RegisterLogPlugin(std::unique_ptr<LoggerPlugin> &&plugin)
+        static void RegisterLogPlugin(std::unique_ptr<LoggerPlugin> &&plugin, const std::string &name)
         {
-                Logger::GetInstance().RegisterLogPlugin_(std::move(plugin));
+                Logger::GetInstance().RegisterLogPlugin_(std::move(plugin), name);
+        }
+
+        static void EnablePlugin(const std::string &name)
+        {
+                Logger::GetInstance().EnablePlugin_(name);
+        }
+
+        static void DisablePlugin(const std::string &name)
+        {
+                Logger::GetInstance().DisablePlugin_(name);
         }
 
         template <typename T>
@@ -114,39 +130,17 @@ public:
         }
 
 private:
-        void RegisterLogPlugin_(std::unique_ptr<LoggerPlugin> &&plugin);
-
-        void WriteLogThread_()
-        {
-                while (!m_bExit) {
-                        std::unique_lock<std::mutex> lck(m_selfLock);
-
-                        m_cv.wait(lck);
-
-                        while (!m_logQueue.empty()) {
-                                LogQueueElm logElm;
-
-                                {
-                                        const std::lock_guard<std::mutex> lock(m_writeLoke);
-
-                                        logElm = std::move(m_logQueue.front());
-                                        m_logQueue.pop();
-                                }
-
-                                for (const auto &plugin : m_pluginVec)
-                                        plugin->WriteLog(logElm.level, logElm.msg);
-                        }
-
-                        lck.unlock();
-                }
-        }
+        void RegisterLogPlugin_(std::unique_ptr<LoggerPlugin> &&plugin, const std::string &name);
+        void EnablePlugin_(const std::string &name);
+        void DisablePlugin_(const std::string &name);
+        void WriteLogThread_();
 
         template <LEVEL_E Level = LEVEL_E::NORMAL, typename T>
         void WriteLog_(const T &log)
         {
                 if (m_pluginVec.empty())
                         return;
-                const std::lock_guard<std::mutex> lock(m_writeLoke);
+                const std::lock_guard<std::mutex> lock(m_writeLock);
 
                 auto               now        = std::chrono::system_clock::now();
                 std::time_t        now_c      = std::chrono::system_clock::to_time_t(now - std::chrono::hours(24));
@@ -171,7 +165,7 @@ private:
                 logElm.level = Level;
 #if 1
                 m_logQueue.push(logElm);
-                m_cv.notify_all();
+                m_flushNotify.notify_all();
 #else
                 for (const auto &plugin : m_pluginVec)
                         plugin->WriteLog(logElm.level, logElm.msg);
@@ -184,7 +178,7 @@ private:
                 if (m_pluginVec.empty())
                         return;
 
-                const std::lock_guard<std::mutex> lock(m_writeLoke);
+                const std::lock_guard<std::mutex> lock(m_writeLock);
 
                 char        buf[4096] = { 0 };
                 int         off       = 0;
@@ -217,7 +211,7 @@ private:
                         logElm.msg.push_back('\n');
 #if 1
                 m_logQueue.push(logElm);
-                m_cv.notify_all();
+                m_flushNotify.notify_all();
 #else
                 for (const auto &plugin : m_pluginVec)
                         plugin->WriteLog(logElm.level, logElm.msg);
@@ -225,18 +219,23 @@ private:
         }
 
 private:
-        std::mutex                                 m_selfLock;
-        std::mutex                                 m_writeLoke;
-        std::vector<std::unique_ptr<LoggerPlugin>> m_pluginVec;
-        std::queue<LogQueueElm>                    m_logQueue;
-        std::thread                                m_workThread;
-        bool                                       m_bDateTime = true;
-        bool                                       m_bExit     = false;
-        std::condition_variable                    m_cv;
+        std::mutex               m_flushNotifyLock;
+        std::mutex               m_writeLock;
+        std::mutex               m_plugInLock;
+        std::vector<PluginInElm> m_pluginVec;
+        std::queue<LogQueueElm>  m_logQueue;
+        std::thread              m_workThread;
+        bool                     m_bDateTime = true;
+        bool                     m_bExit     = false;
+        std::condition_variable  m_flushNotify;
 };
 
 }  // namespace lkup69
 
+#define enable_plugin(name)       lkup69::Logger::EnablePlugin(name)
+#define disable_plugin(name)      lkup69::Logger::DisablePlugin(name)
+
+// _f means full message
 #define log_err_f(format, ...)    lkup69::Logger::Err("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
 #define log_warn_f(format, ...)   lkup69::Logger::Warn("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
 #define log_trace_f(format, ...)  lkup69::Logger::Trace("[%s][%s][%d] " format, __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
